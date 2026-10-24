@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111111">
+<title>WinMyint2D3D</title>
+<style>
+:root {
+  --gold: #e5bd62;
+  --bg: #101010;
+  --card: #1b1b1b;
+  --muted: #aaa;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #fff;
+  font-family: system-ui, sans-serif;
+}
+header {
+  padding: 22px 16px;
+  background: #181818;
+  border-bottom: 1px solid #483a1e;
+  text-align: center;
+}
+header h1 {
+  color: var(--gold);
+  margin: 0 0 6px;
+}
+header p { color: var(--muted); margin: 0; }
+main {
+  max-width: 650px;
+  margin: auto;
+  padding: 16px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.stat-number {
+  color: var(--gold);
+  font-size: 28px;
+  font-weight: bold;
+}
+label {
+  display: block;
+  margin: 12px 0 6px;
+  color: #ddd;
+}
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #111;
+  color: white;
+  font: inherit;
+}
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 15px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+.primary {
+  width: 100%;
+  margin-top: 15px;
+  background: var(--gold);
+  color: #17120a;
+}
+.secondary {
+  background: #333;
+  color: white;
+}
+.delete {
+  background: #492525;
+  color: #ffdada;
+  padding: 7px 10px;
+}
+.note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #333;
+  padding: 12px 0;
+}
+.note strong { color: var(--gold); }
+.note small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+  white-space: pre-wrap;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.muted { color: var(--muted); }
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 20px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>✦ WinMyint2D3D ✦</h1>
+  <p>ဂဏန်းမှတ်စု စီမံခန့်ခွဲမှု</p>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="card">
+      <div class="muted">မှတ်တမ်းစုစုပေါင်း</div>
+      <div class="stat-number" id="total">0</div>
+    </div>
+    <div class="card">
+      <div class="muted">ယနေ့မှတ်တမ်း</div>
+      <div class="stat-number" id="today">0</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3 style="color:var(--gold)">＋ ဂဏန်းမှတ်စုအသစ်</h3>
+    <form id="noteForm">
+      <label for="type">အမျိုးအစား</label>
+      <select id="type" required>
+        <option value="2D">2D</option>
+        <option value="3D">3D</option>
+      </select>
+
+      <label for="number">ဂဏန်း</label>
+      <input id="number" inputmode="numeric"
+        autocomplete="off" placeholder="ဥပမာ 07 သို့မဟုတ် 007"
+        required>
+
+      <label for="date">ရက်စွဲ</label>
+      <input id="date" type="date" required>
+
+      <label for="noteText">မှတ်ချက်</label>
+      <textarea id="noteText" rows="2"
+        maxlength="300" placeholder="ကိုယ်ပိုင်မှတ်ချက်"></textarea>
+
+      <button class="primary" type="submit">မှတ်စုသိမ်းမယ်</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h3 style="color:var(--gold)">မှတ်တမ်းများ</h3>
+    <input id="search" placeholder="ဂဏန်း၊ မှတ်ချက် ရှာရန်...">
+    <div class="actions" style="margin-top:12px">
+      <button class="secondary" id="exportBtn">စာရင်းထုတ်ယူရန်</button>
+    </div>
+    <div id="notes"></div>
+    <p id="empty" class="muted">မှတ်တမ်း မရှိသေးပါ။</p>
+  </section>
+</main>
+
+<footer>
+  WinMyint2D3D· မှတ်စုစနစ် Demo
+  <br>ဤဗားရှင်းသည် ဤ Browser ထဲတွင်သာ သိမ်းဆည်းပါသည်။
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY = "shwe2d3d_notes_v1";
+let notes = [];
+
+try {
+  notes = JSON.parse(localStorage.getItem(KEY) || "[]");
+  if (!Array.isArray(notes)) notes = [];
+} catch {
+  notes = [];
+}
+
+const today = new Date();
+$("date").value =
+  `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(notes));
+  render();
+}
+
+function render() {
+  $("total").textContent = notes.length;
+  $("today").textContent =
+    notes.filter(n => n.date === $("date").value).length;
+
+  const q = $("search").value.trim().toLowerCase();
+  const list = notes.filter(n =>
+    (n.number + " " + n.note + " " + n.type + " " + n.date)
+      .toLowerCase().includes(q)
+  );
+
+  $("notes").replaceChildren();
+  $("empty").hidden = list.length > 0;
+
+  list.forEach(n => {
+    const row = document.createElement("div");
+    row.className = "note";
+
+    const info = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = n.type + " · " + n.number;
+
+    const detail = document.createElement("small");
+    detail.textContent = n.date + (n.note ? "\n" + n.note : "");
+
+    info.append(title, detail);
+
+    const del = document.createElement("button");
+    del.className = "delete";
+    del.textContent = "ဖျက်မယ်";
+    del.addEventListener("click", () => {
+      if (!confirm("ဒီမှတ်တမ်းကို ဖျက်မှာ သေချာပါသလား?")) return;
+      notes = notes.filter(item => item.id !== n.id);
+      save();
+    });
+
+    row.append(info, del);
+    $("notes").append(row);
+  });
+}
+
+$("noteForm").addEventListener("submit", e => {
+  e.preventDefault();
+
+  const type = $("type").value;
+  const number = $("number").value.trim();
+  const date = $("date").value;
+  const note = $("noteText").value.trim();
+
+  const valid = type === "2D" ? /^\d{2}$/.test(number)
+    : /^\d{3}$/.test(number);
+
+  if (!valid) {
+    alert(type + " အတွက် ဂဏန်း " +
+      (type === "2D" ? "၂ လုံး" : "၃ လုံး") +
+      " အတိအကျ ထည့်ပါ။");
+    return;
+  }
+
+  if (!date) {
+    alert("ရက်စွဲ ရွေးပေးပါ။");
+    return;
+  }
+
+  notes.unshift({
+    id: Date.now().toString() + Math.random().toString(36).slice(2),
+    type, number, date, note
+  });
+
+  try {
+    save();
+    $("number").value = "";
+    $("noteText").value = "";
+    $("number").focus();
+  } catch {
+    alert("သိမ်းဆည်းမရပါ။ Browser Storage ကို စစ်ဆေးပါ။");
+  }
+});
+
+$("search").addEventListener("input", render);
+
+$("exportBtn").addEventListener("click", () => {
+  const header = ["Type", "Number", "Date", "Note"];
+  const rows = notes.map(n => [n.type, n.number, n.date, n.note]);
+  const csv = [header, ...rows].map(row =>
+    row.map(value =>
+      '"' + String(value).replace(/"/g, '""') + '"'
+    ).join(",")
+  ).join("\r\n");
+
+  const blob = new Blob(["\uFEFF" + csv], {
+    type: "text/csv;charset=utf-8;"
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "WinMyint-2d3d-notes.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+render();
+</script>
+</body>
+</html>
